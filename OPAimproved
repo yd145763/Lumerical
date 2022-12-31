@@ -1,0 +1,112 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Dec 31 14:06:10 2022
+
+@author: Lim Yudian
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+import imp
+
+os.add_dll_directory("C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+
+master_data = pd.DataFrame([])
+
+#what phase difference you like to explore?
+phs = [0,10,20,30,40,50,60,70] #list of phase change in degree
+filename = ["0degree", "10degree", '20degree', '30degree', '40degree', '50degree', '60degree', '70degree'] #the respective name for the phase change
+for ph, name in zip(phs, filename):
+    fdtd = lumapi.FDTD()    
+
+    n=8 #how many emitters
+    wavelength = 1.565e-6 #wavelength
+    source_x = 2e-6 #width of the source in x-direction
+    source_separation = 1e-6 #separation between sources
+    source_y = 2e-6 #width of the source in y-direction
+    distance = source_x + source_separation
+    height = 200e-6
+
+    
+    phase_difference = []
+    i = 0
+    while len(phase_difference) < n:
+        phase_difference.append(i)
+        i += ph
+   
+    x_coor = []
+    j = 0
+    while len(x_coor) <n:
+        x_coor.append(j)
+        j += distance
+
+    for x, phase in zip(x_coor, phase_difference):
+        fdtd.addgaussian()
+        fdtd.set("injection axis","z")
+        fdtd.set("direction","forward")
+        fdtd.set("x",x)
+        fdtd.set("x span",source_x)
+        fdtd.set("y",0.0)
+        fdtd.set("y span",source_y)
+        fdtd.set("z", 0.0)
+        fdtd.set("wavelength start", wavelength)
+        fdtd.set("phase", phase)
+        fdtd.set("waist radius w0",0.5e-6)
+        fdtd.set("distance from waist",-5e-6)
+
+
+    fdtd.addpower()
+    fdtd.set("name", "Overall")
+    fdtd.set("monitor type", "2D Y-normal")
+    fdtd.set("x min", -10e-6)
+    fdtd.set("x max", x_coor[n-1] + 10e-6)
+    fdtd.set("y", 0.0)
+    fdtd.set("z min", 0.0)
+    fdtd.set("z max", height)
+    
+    fdtd.addfdtd()
+    fdtd.set("x min", -10e-6)
+    fdtd.set("x max", x_coor[n-1] + 10e-6)
+    fdtd.set("y", 0.0)
+    fdtd.set("y span", 3e-6)
+    fdtd.set("z min", 0.0)
+    fdtd.set("z max", height+10e-6)
+
+    fdtd.addpower()
+    fdtd.set("name", "200um")
+    fdtd.set("monitor type", 2)
+    fdtd.set("x min", -10e-6)
+    fdtd.set("x max", x_coor[n-1] + 10e-6)
+    fdtd.set("y", 0.0)
+    fdtd.set("z", height)
+
+
+    fdtd.save("OPA.fsp")
+    fdtd.run()
+
+    E = fdtd.getresult("200um","E")
+    x = E["x"].tolist()
+    x = pd.Series(x)
+    master_data["x"] = x.values
+    
+    E_field = E["E"]
+    Ex = E_field[:,0,0,0,0]
+    Ey = E_field[:,0,0,0,1]
+    Ez = E_field[:,0,0,0,2]
+    Emag = (np.sqrt(np.abs(Ex)**2 + np.abs(Ey)**2 + np.abs(Ez)**2)).tolist()
+    Emag = pd.Series(Emag)
+    master_data[name] = Emag.values
+
+print(master_data.head())
+master_data.to_csv('OPA_data.csv')
+fig1 = plt.figure("Figure 1")
+ax = plt.axes()
+for name in filename:
+    x = master_data['x'].tolist()
+    y= master_data[name].tolist()
+    ax.plot(x, y)
+plt.legend(filename)
+plt.show()
