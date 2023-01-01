@@ -2,15 +2,11 @@
 """
 Created on Sun Jan  1 09:27:35 2023
 
-@author: limyudian
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Dec 31 14:06:10 2022
 
 @author: Lim Yudian
 """
+
+#double phase
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,17 +20,19 @@ lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v222\\api\\pyth
 master_data = pd.DataFrame([])
 
 #what phase difference you like to explore?
-phs = [0,30, 60, 90, 120, 150, 180] #list of phase change in degree
-filename = ["0degree", '30degree', '60degree', '90degree', '120degree', '150degree', '180degree'] #the respective name for the phase change
+phs = [0,45, 90, 135, 180] #list of phase change in degree
+filename = ["0degree", '45degree', '90degree', '135degree', '180degree'] #the respective name for the phase change
 data_path = 'C:\\Users\\Lim Yudian\\Documents\\doublephase16emitter.csv' #where you want to save your data
 for ph, name in zip(phs, filename):
     fdtd = lumapi.FDTD()    
 
-    n=16 #how many emitters
+    n=8 #how many emitters
     wavelength = 1.565e-6 #wavelength
     source_x = 2e-6 #width of the source in x-direction
+    x_distance = 30e-6 #distance of fdtd boundary from the first/last light source along x-axis
     source_separation = 1e-6 #separation between sources
     source_y = 2e-6 #width of the source in y-direction
+    y_distance = 2e-6 #distance of fdtd boundary from the first/last light source along x-axis
     distance = source_x + source_separation
     height = 200e-6
     if (n % 2) == 0:
@@ -104,17 +102,17 @@ for ph, name in zip(phs, filename):
     fdtd.addpower()
     fdtd.set("name", "Overall")
     fdtd.set("monitor type", "2D Y-normal")
-    fdtd.set("x min", -10e-6)
-    fdtd.set("x max", x_coor[n-1] + 10e-6)
+    fdtd.set("x min", -1*x_distance)
+    fdtd.set("x max", x_coor[n-1] + x_distance)
     fdtd.set("y", 0.0)
     fdtd.set("z min", 0.0)
     fdtd.set("z max", height)
     
     fdtd.addfdtd()
-    fdtd.set("x min", -10e-6)
-    fdtd.set("x max", x_coor[n-1] + 10e-6)
-    fdtd.set("y", 0.0)
-    fdtd.set("y span", 3e-6)
+    fdtd.set("x min", -1*x_distance)
+    fdtd.set("x max", x_coor[n-1] + x_distance)
+    fdtd.set("y min", -1*((source_y/2)+y_distance))
+    fdtd.set("y max", (source_y/2)+y_distance)
     fdtd.set("z min", 0.0)
     fdtd.set("z max", height+10e-6)
 
