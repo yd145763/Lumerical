@@ -11,24 +11,29 @@ import pandas as pd
 import os
 import imp
 
-os.add_dll_directory("C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
-lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+os.add_dll_directory("C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
 
 master_data = pd.DataFrame([])
 
 #what phase difference you like to explore?
-phs = [0,10,20,30,40,50,60,70] #list of phase change in degree
-filename = ["0degree", "10degree", '20degree', '30degree', '40degree', '50degree', '60degree', '70degree'] #the respective name for the phase change
+phs = [0,10,20,30,40,50,60,70,80,90] #list of phase change in degree
+filename = ["0degree", "10degree", '20degree', '30degree', '40degree', '50degree', '60degree', '70degree', '80degree', '90degree'] #the respective name for the phase change
 for ph, name in zip(phs, filename):
-    fdtd = lumapi.FDTD()    
-
+    
+    fdtd = lumapi.FDTD()
+    
     n=8 #how many emitters
     wavelength = 1.565e-6 #wavelength
-    source_x = 2e-6 #width of the source in x-direction
+    source_x = 5e-6 #width of the source in x-direction
+    x_distance = 30e-6 #distance of fdtd boundary from the first/last light source along x-axis
     source_separation = 1e-6 #separation between sources
-    source_y = 2e-6 #width of the source in y-direction
+    source_y = 20e-6 #width of the source in y-direction
+    y_distance = 2e-6 #distance of fdtd boundary from the first/last light source along x-axis
     distance = source_x + source_separation
-    height = 200e-6
+    height = 300e-6
+    
+
 
     
     phase_difference = []
@@ -61,22 +66,22 @@ for ph, name in zip(phs, filename):
     fdtd.addpower()
     fdtd.set("name", "Overall")
     fdtd.set("monitor type", "2D Y-normal")
-    fdtd.set("x min", -10e-6)
-    fdtd.set("x max", x_coor[n-1] + 10e-6)
+    fdtd.set("x min", -1*x_distance)
+    fdtd.set("x max", x_coor[n-1] + x_distance)
     fdtd.set("y", 0.0)
     fdtd.set("z min", 0.0)
     fdtd.set("z max", height)
     
     fdtd.addfdtd()
-    fdtd.set("x min", -10e-6)
-    fdtd.set("x max", x_coor[n-1] + 10e-6)
-    fdtd.set("y", 0.0)
-    fdtd.set("y span", 3e-6)
+    fdtd.set("x min", -1*x_distance)
+    fdtd.set("x max", x_coor[n-1] + x_distance)
+    fdtd.set("y min", -1*((source_y/2)+y_distance))
+    fdtd.set("y max", (source_y/2)+y_distance)
     fdtd.set("z min", 0.0)
     fdtd.set("z max", height+10e-6)
 
     fdtd.addpower()
-    fdtd.set("name", "200um")
+    fdtd.set("name", "E_height")
     fdtd.set("monitor type", 2)
     fdtd.set("x min", -10e-6)
     fdtd.set("x max", x_coor[n-1] + 10e-6)
@@ -87,7 +92,7 @@ for ph, name in zip(phs, filename):
     fdtd.save("OPA.fsp")
     fdtd.run()
 
-    E = fdtd.getresult("200um","E")
+    E = fdtd.getresult("E_height","E")
     x = E["x"].tolist()
     x = pd.Series(x)
     master_data["x"] = x.values
