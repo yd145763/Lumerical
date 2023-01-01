@@ -2,7 +2,7 @@
 """
 Created on Sun Jan  1 09:27:35 2023
 
-@author: limyu
+@author: limyudian
 """
 
 # -*- coding: utf-8 -*-
@@ -18,15 +18,15 @@ import pandas as pd
 import os
 import imp
 
-os.add_dll_directory("C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
-lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+os.add_dll_directory("C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
 
 master_data = pd.DataFrame([])
 
 #what phase difference you like to explore?
 phs = [0,30, 60, 90, 120, 150, 180] #list of phase change in degree
 filename = ["0degree", '30degree', '60degree', '90degree', '120degree', '150degree', '180degree'] #the respective name for the phase change
-data_path = 'C:\\Users\\limyu\\Documents\\data16emitters.csv' #where you want to save your data
+data_path = 'C:\\Users\\Lim Yudian\\Documents\\doublephase16emitter.csv' #where you want to save your data
 for ph, name in zip(phs, filename):
     fdtd = lumapi.FDTD()    
 
@@ -37,24 +37,47 @@ for ph, name in zip(phs, filename):
     source_y = 2e-6 #width of the source in y-direction
     distance = source_x + source_separation
     height = 200e-6
+    if (n % 2) == 0:
+        phase_difference1 = []
+        i = 0
+        while len(phase_difference1) < 0.5*n:
+            phase_difference1.append(i)
+            i += ph
+        phase_difference2 = []
+        k = 0
+        while len(phase_difference2) < 0.5*n:
+            phase_difference2.append(k)
+            k += ph
+            
+    else:
+        phase_difference1 = []
+        i = 0
+        while len(phase_difference1) < (0.5*n) +0.5:
+            phase_difference1.append(i)
+            i += ph
+        phase_difference2 = []
+        k = 0
+        while len(phase_difference2) < (0.5*n) -0.5:
+            phase_difference2.append(k)
+            k += ph
+        
 
-    phase_difference1 = []
-    i = 0
-    while len(phase_difference1) < 0.5*n:
-        phase_difference1.append(i)
-        i += ph
 
-    phase_difference2 = []
-    k = 0
-    while len(phase_difference2) < 0.5*n:
-        phase_difference2.append(k)
-        k += ph
+    def interleave_diff_len_lists(list1, list2):
+        result = []
+        l1 = len(list1)
+        l2 = len(list2)
 
-    def countList(phase_difference1, phase_difference2):
-        return [sub[item] for item in range(len(phase_difference2))
-                          for sub in [phase_difference1, phase_difference2]]
-    phase_difference = countList(phase_difference1, phase_difference2)
-    
+        
+        for m in range(max(l1, l2)):
+            if m < l1:
+                result.append(list1[m])
+            if m < l2:
+                result.append(list2[m])
+
+        return result
+
+    phase_difference = interleave_diff_len_lists(phase_difference1, phase_difference2)
 
    
     x_coor = []
@@ -121,7 +144,7 @@ for ph, name in zip(phs, filename):
     master_data[name] = Emag.values
 
 print(master_data.head())
-master_data.to_csv('C:\\Users\\limyu\\Documents\\data16emitters.csv')
+
 fig1 = plt.figure("Figure 1")
 ax = plt.axes()
 for name in filename:
@@ -129,4 +152,7 @@ for name in filename:
     y= master_data[name].tolist()
     ax.plot(x, y)
 plt.legend(filename)
+plt.xlabel("x-position (um)")
+plt.ylabel("Electric Field (eV)")
 plt.show()
+master_data.to_csv(data_path)
