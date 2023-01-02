@@ -1,0 +1,114 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Dec 31 14:06:10 2022
+
+@author: Lim Yudian
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+import imp
+
+os.add_dll_directory("C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+
+master_data = pd.DataFrame([])
+
+
+
+    
+fdtd = lumapi.FDTD()
+    
+n=16 #how many emitters
+wavelength = 1.565e-6 #wavelength
+source_x = 2e-6 #width of the source in x-direction
+x_distance = 100e-6 #distance of fdtd boundary from the first/last light source along x-axis
+source_separation = 1e-6 #separation between sources
+source_y = 2e-6 #width of the source in y-direction
+y_distance = 2e-6 #distance of fdtd boundary from the first/last light source along x-axis
+distance = source_x + source_separation
+height = 80e-6
+
+
+phase_difference = [0,0,90,90,180,180,270,270,360,360,450,450,540,540,630,630]
+
+   
+x_coor = []
+j = 0
+while len(x_coor) <n:
+
+    x_coor.append(j)
+    j += distance
+
+for x, phase in zip(x_coor, phase_difference):
+        
+    fdtd.addgaussian()
+    fdtd.set("injection axis","z")
+    fdtd.set("direction","forward")
+    fdtd.set("x",x)
+    fdtd.set("x span",source_x)
+    fdtd.set("y",0.0)
+    fdtd.set("y span",source_y)
+    fdtd.set("z", 0.0)
+    fdtd.set("wavelength start", wavelength)
+    fdtd.set("phase", phase)
+    fdtd.set("waist radius w0",0.5e-6)
+    fdtd.set("distance from waist",-5e-6)
+
+
+fdtd.addpower()
+fdtd.set("name", "Overall")
+fdtd.set("monitor type", "2D Y-normal")
+fdtd.set("x min", -1*x_distance)
+fdtd.set("x max", x_coor[n-1] + x_distance)
+fdtd.set("y", 0.0)
+fdtd.set("z min", 0.0)
+fdtd.set("z max", height)
+    
+fdtd.addfdtd()
+fdtd.set("x min", -1*x_distance)
+fdtd.set("x max", x_coor[n-1] + x_distance)
+fdtd.set("y min", -1*((source_y/2)+y_distance))
+fdtd.set("y max", (source_y/2)+y_distance)
+fdtd.set("z min", 0.0)
+fdtd.set("z max", height+10e-6)
+
+fdtd.addpower()
+fdtd.set("name", "E_height")
+fdtd.set("monitor type", 2)
+fdtd.set("x min", -1*x_distance)
+fdtd.set("x max", x_coor[n-1] + x_distance)
+fdtd.set("y", 0.0)
+fdtd.set("z", height)
+
+
+fdtd.save("OPA.fsp")
+fdtd.run()
+
+E = fdtd.getresult("E_height","E")
+x = E["x"].tolist()
+x = pd.Series(x)
+master_data["x"] = x.values
+    
+E_field = E["E"]
+Ex = E_field[:,0,0,0,0]
+Ey = E_field[:,0,0,0,1]
+Ez = E_field[:,0,0,0,2]
+Emag = (np.sqrt(np.abs(Ex)**2 + np.abs(Ey)**2 + np.abs(Ez)**2)).tolist()
+Emag = pd.Series(Emag)
+master_data["E_field"] = Emag.values
+
+print(master_data.head())
+master_data.to_csv('OPA_data.csv')
+fig1 = plt.figure("Figure 1")
+ax = plt.axes()
+
+x = master_data['x'].tolist()
+y= master_data["E_field"].tolist()
+ax.plot(x, y)
+
+plt.xlabel("x-position (m)")
+plt.ylabel("Electric Field (eV)")
+plt.show()
