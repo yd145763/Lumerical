@@ -17,8 +17,8 @@ lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\pyth
 master_data = pd.DataFrame([])
 
 #what phase difference you like to explore?
-phs = [0,90,180, 270, 360] #list of phase change in degree
-filename = ["0°", '90°', '180°', '270°', '360°'] #the respective name for the phase change
+phs = [0, 45, 90, 135, 180, 270] #list of phase change in degree
+filename = ["0°", "45°", '90°', "135°", '180°', '270°'] #the respective name for the phase change
 for ph, name in zip(phs, filename):
     
     fdtd = lumapi.FDTD()
@@ -114,4 +114,6 @@ for name in filename:
     y= master_data[name].tolist()
     ax.plot(x, y)
 plt.legend(filename)
+plt.xlabel("x-position (m)")
+plt.ylabel("Electric Field (eV)")
 plt.show()
