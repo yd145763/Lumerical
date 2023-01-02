@@ -11,27 +11,27 @@ import pandas as pd
 import os
 import imp
 
-os.add_dll_directory("C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
-lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+os.add_dll_directory("C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
 
 master_data = pd.DataFrame([])
 
 #what phase difference you like to explore?
-phs = [0,10,20,30,40,50,60,70,80,90] #list of phase change in degree
-filename = ["0degree", "10degree", '20degree', '30degree', '40degree', '50degree', '60degree', '70degree', '80degree', '90degree'] #the respective name for the phase change
+phs = [0,90,180, 270, 360] #list of phase change in degree
+filename = ["0°", '90°', '180°', '270°', '360°'] #the respective name for the phase change
 for ph, name in zip(phs, filename):
     
     fdtd = lumapi.FDTD()
     
     n=8 #how many emitters
     wavelength = 1.565e-6 #wavelength
-    source_x = 5e-6 #width of the source in x-direction
-    x_distance = 30e-6 #distance of fdtd boundary from the first/last light source along x-axis
+    source_x = 2e-6 #width of the source in x-direction
+    x_distance = 100e-6 #distance of fdtd boundary from the first/last light source along x-axis
     source_separation = 1e-6 #separation between sources
-    source_y = 20e-6 #width of the source in y-direction
+    source_y = 2e-6 #width of the source in y-direction
     y_distance = 2e-6 #distance of fdtd boundary from the first/last light source along x-axis
     distance = source_x + source_separation
-    height = 300e-6
+    height = 200e-6
     
 
 
@@ -83,8 +83,8 @@ for ph, name in zip(phs, filename):
     fdtd.addpower()
     fdtd.set("name", "E_height")
     fdtd.set("monitor type", 2)
-    fdtd.set("x min", -10e-6)
-    fdtd.set("x max", x_coor[n-1] + 10e-6)
+    fdtd.set("x min", -1*x_distance)
+    fdtd.set("x max", x_coor[n-1] + x_distance)
     fdtd.set("y", 0.0)
     fdtd.set("z", height)
 
