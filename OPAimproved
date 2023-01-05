@@ -11,15 +11,15 @@ import pandas as pd
 import os
 import imp
 
-os.add_dll_directory("C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
-lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+os.add_dll_directory("C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
 
 master_data = pd.DataFrame([])
 
 #what phase difference you like to explore?
 phs = [0,60,120,180,240,300,360] #list of phase change in degree
 filename = ["0°", '60°', '120°', '180°','240°','300°','360°'] #the respective name for the phase change
-n=8 #how many emitters
+n=16 #how many emitters
 wavelength = 1.565e-6 #wavelength
 source_x = 2e-6 #width of the source in x-direction
 x_distance = 100e-6 #distance of fdtd boundary from the first/last light source along x-axis
@@ -134,7 +134,7 @@ else:
 
 
     print(master_data.head())
-    master_data.to_csv('OPA_data.csv')
+    master_data.to_csv('C:\\Users\\Lim Yudian\\Downloads\\OPA_data16emitters.csv')
     fig1 = plt.figure("Figure 1")
     ax = plt.axes()
     for name in filename:
@@ -146,10 +146,11 @@ else:
     plt.ylabel("Electric Field (eV)")
     plt.show()
 
-
+fig2=plt.figure("Figure 2")
+ax1 = plt.axes()
+ax1.plot(x, master_data("0°"))
 
 
 
 
     
-
