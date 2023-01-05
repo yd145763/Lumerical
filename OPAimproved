@@ -98,7 +98,7 @@ else:
         E = fdtd.getresult("E_height","E")
         x = E["x"]
         x = x[:,0].tolist()
-        master_data["x"] = x.values
+        master_data["x"] = x
         
         E_field = E["E"]
         Ex = E_field[:,0,0,0,0]
