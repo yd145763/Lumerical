@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Jan  1 09:27:35 2023
-
+Created on Sat Dec 31 14:06:10 2022
 
 @author: Lim Yudian
 """
-
-#double phase
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,137 +17,175 @@ lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v222\\api\\pyth
 master_data = pd.DataFrame([])
 
 #what phase difference you like to explore?
-phs = [0,45, 90, 135, 180] #list of phase change in degree
-filename = ["0degree", '45degree', '90degree', '135degree', '180degree'] #the respective name for the phase change
-data_path = 'C:\\Users\\Lim Yudian\\Documents\\doublephase16emitter.csv' #where you want to save your data
-for ph, name in zip(phs, filename):
-    fdtd = lumapi.FDTD()    
+phs = [0,45,60,90,120, 135,180, 225, 240, 270, 315, 360]  #list of phase change in degree
+filename = ["0°", "45°", "60°", "90°", "120°", "135°", "180°", "225°", "240°", "270°", "315°", "360°"] #the respective name for the phase change
+n=16 #how many emitters
+wavelength = 1.565e-6 #wavelength
+source_x = 2e-6 #width of the source in x-direction
+x_distance = 100e-6 #distance of fdtd boundary from the first/last light source along x-axis
+source_separation = 1e-6 #separation between sources
+source_y = 2e-6 #width of the source in y-direction
+y_distance = 2e-6 #distance of fdtd boundary from the first/last light source along x-axis
+distance = source_x + source_separation
+height = 80e-6
 
-    n=8 #how many emitters
-    wavelength = 1.565e-6 #wavelength
-    source_x = 2e-6 #width of the source in x-direction
-    x_distance = 30e-6 #distance of fdtd boundary from the first/last light source along x-axis
-    source_separation = 1e-6 #separation between sources
-    source_y = 2e-6 #width of the source in y-direction
-    y_distance = 2e-6 #distance of fdtd boundary from the first/last light source along x-axis
-    distance = source_x + source_separation
-    height = 200e-6
-    if (n % 2) == 0:
-        phase_difference1 = []
-        i = 0
-        while len(phase_difference1) < 0.5*n:
-            phase_difference1.append(i)
-            i += ph
-        phase_difference2 = []
-        k = 0
-        while len(phase_difference2) < 0.5*n:
-            phase_difference2.append(k)
-            k += ph
+if len(phs) != len(filename):
+    print("Error! 'phs' and 'filename' must have the same number of elements")
+else:
+    
+    for ph, name in zip(phs, filename):
+        
+        fdtd = lumapi.FDTD()
+        
+        if (n % 2) == 0:
+            phase_difference1 = []
+            i = 0
+            while len(phase_difference1) < 0.5*n:
+                phase_difference1.append(i)
+                i += ph
+            phase_difference2 = []
+            k = 0
+            while len(phase_difference2) < 0.5*n:
+                phase_difference2.append(k)
+                k += ph
+                
+        else:
+            phase_difference1 = []
+            i = 0
+            while len(phase_difference1) < (0.5*n) +0.5:
+                phase_difference1.append(i)
+                i += ph
+            phase_difference2 = []
+            k = 0
+            while len(phase_difference2) < (0.5*n) -0.5:
+                phase_difference2.append(k)
+                k += ph
             
-    else:
-        phase_difference1 = []
-        i = 0
-        while len(phase_difference1) < (0.5*n) +0.5:
-            phase_difference1.append(i)
-            i += ph
-        phase_difference2 = []
-        k = 0
-        while len(phase_difference2) < (0.5*n) -0.5:
-            phase_difference2.append(k)
-            k += ph
+
+
+        def interleave_diff_len_lists(list1, list2):
+            result = []
+            l1 = len(list1)
+            l2 = len(list2)
+
+            
+            for m in range(max(l1, l2)):
+                if m < l1:
+                    result.append(list1[m])
+                if m < l2:
+                    result.append(list2[m])
+
+            return result
+
+        phase_difference = interleave_diff_len_lists(phase_difference1, phase_difference2)
+        print(phase_difference)
+
+        x_coor = []
+        j = 0
+        while len(x_coor) <n:
+            x_coor.append(j)
+            j += distance
+
+        for x, phase in zip(x_coor, phase_difference):
+            fdtd.addgaussian()
+            fdtd.set("injection axis","z")
+            fdtd.set("direction","forward")
+            fdtd.set("x",x)
+            fdtd.set("x span",source_x)
+            fdtd.set("y",0.0)
+            fdtd.set("y span",source_y)
+            fdtd.set("z", 0.0)
+            fdtd.set("wavelength start", wavelength)
+            fdtd.set("phase", phase)
+            fdtd.set("waist radius w0",0.5e-6)
+            fdtd.set("distance from waist",-5e-6)
+
+
+        fdtd.addpower()
+        fdtd.set("name", "Overall")
+        fdtd.set("monitor type", "2D Y-normal")
+        fdtd.set("x min", -1*x_distance)
+        fdtd.set("x max", x_coor[n-1] + x_distance)
+        fdtd.set("y", 0.0)
+        fdtd.set("z min", 0.0)
+        fdtd.set("z max", height)
         
+        fdtd.addfdtd()
+        fdtd.set("x min", -1*x_distance)
+        fdtd.set("x max", x_coor[n-1] + x_distance)
+        fdtd.set("y min", -1*((source_y/2)+y_distance))
+        fdtd.set("y max", (source_y/2)+y_distance)
+        fdtd.set("z min", 0.0)
+        fdtd.set("z max", height+10e-6)
+
+        fdtd.addpower()
+        fdtd.set("name", "E_height")
+        fdtd.set("monitor type", 2)
+        fdtd.set("x min", -1*x_distance)
+        fdtd.set("x max", x_coor[n-1] + x_distance)
+        fdtd.set("y", 0.0)
+        fdtd.set("z", height)
 
 
-    def interleave_diff_len_lists(list1, list2):
-        result = []
-        l1 = len(list1)
-        l2 = len(list2)
+        fdtd.save("OPA.fsp")
+        fdtd.run()
 
+        E = fdtd.getresult("E_height","E")
+        x = E["x"].tolist()
+        x = pd.Series(x)
+        master_data["x"] = x.values
         
-        for m in range(max(l1, l2)):
-            if m < l1:
-                result.append(list1[m])
-            if m < l2:
-                result.append(list2[m])
+        E_field = E["E"]
+        Ex = E_field[:,0,0,0,0]
+        Ey = E_field[:,0,0,0,1]
+        Ez = E_field[:,0,0,0,2]
+        Emag = (np.sqrt(np.abs(Ex)**2 + np.abs(Ey)**2 + np.abs(Ez)**2)).tolist()
+        Emag = pd.Series(Emag)
+        master_data[name] = Emag.values
+        
+        
+        E1 =  fdtd.getresult("Overall","E")
+        x1 = E1["x"]
+        x1 = x1[:,0]
+        y1 = E1["y"]
+        z = E1["z"]
+        z = z[:,0]
+            
+        E2 = E1["E"]
 
-        return result
+        Ex1 = E2[:,0,:,0,0]
+        Ey1 = E2[:,0,:,0,1]
+        Ez1 = E2[:,0,:,0,2]
+        Emag1 = np.sqrt(np.abs(Ex1)**2 + np.abs(Ey1)**2 + np.abs(Ez1)**2)
+        Emag1 = np.transpose(Emag1)
 
-    phase_difference = interleave_diff_len_lists(phase_difference1, phase_difference2)
-
-   
-    x_coor = []
-    j = 0
-    while len(x_coor) <n:
-        x_coor.append(j)
-        j += distance
-
-    for x, phase in zip(x_coor, phase_difference):
-        fdtd.addgaussian()
-        fdtd.set("injection axis","z")
-        fdtd.set("direction","forward")
-        fdtd.set("x",x)
-        fdtd.set("x span",source_x)
-        fdtd.set("y",0.0)
-        fdtd.set("y span",source_y)
-        fdtd.set("z", 0.0)
-        fdtd.set("wavelength start", wavelength)
-        fdtd.set("phase", phase)
-        fdtd.set("waist radius w0",0.5e-6)
-        fdtd.set("distance from waist",-5e-6)
+        plt.contourf(x1,z,Emag1, 100)
+        plt.colorbar()
+        plt.xlabel("x-position (m)")
+        plt.ylabel("z-position (m)")
+        plt.title(name)
+        plt.show()
+        plt.close()
 
 
-    fdtd.addpower()
-    fdtd.set("name", "Overall")
-    fdtd.set("monitor type", "2D Y-normal")
-    fdtd.set("x min", -1*x_distance)
-    fdtd.set("x max", x_coor[n-1] + x_distance)
-    fdtd.set("y", 0.0)
-    fdtd.set("z min", 0.0)
-    fdtd.set("z max", height)
+    print(master_data.head())
+    master_data.to_csv('C:\\Users\\Lim Yudian\\Downloads\\OPA_data16emittersdoublephase.csv')
+    fig1 = plt.figure("Figure 1")
+    ax = plt.axes()
+    for name in filename:
+        x = master_data['x'].tolist()
+        y= master_data[name].tolist()
+        ax.plot(x, y)
+    plt.legend(filename)
+    plt.xlabel("x-position (m)")
+    plt.ylabel("Electric Field (eV)")
+    plt.show()
+
+fig2=plt.figure("Figure 2")
+ax1 = plt.axes()
+ax1.plot(x, master_data("0°"))
+
+
+
+
     
-    fdtd.addfdtd()
-    fdtd.set("x min", -1*x_distance)
-    fdtd.set("x max", x_coor[n-1] + x_distance)
-    fdtd.set("y min", -1*((source_y/2)+y_distance))
-    fdtd.set("y max", (source_y/2)+y_distance)
-    fdtd.set("z min", 0.0)
-    fdtd.set("z max", height+10e-6)
-
-    fdtd.addpower()
-    fdtd.set("name", "E_height")
-    fdtd.set("monitor type", 2)
-    fdtd.set("x min", -10e-6)
-    fdtd.set("x max", x_coor[n-1] + 10e-6)
-    fdtd.set("y", 0.0)
-    fdtd.set("z", height)
-
-
-    fdtd.save("OPA.fsp")
-    fdtd.run()
-
-    E = fdtd.getresult("E_height","E")
-    x = E["x"].tolist()
-    x = pd.Series(x)
-    master_data["x"] = x.values
-    
-    E_field = E["E"]
-    Ex = E_field[:,0,0,0,0]
-    Ey = E_field[:,0,0,0,1]
-    Ez = E_field[:,0,0,0,2]
-    Emag = (np.sqrt(np.abs(Ex)**2 + np.abs(Ey)**2 + np.abs(Ez)**2)).tolist()
-    Emag = pd.Series(Emag)
-    master_data[name] = Emag.values
-
-print(master_data.head())
-
-fig1 = plt.figure("Figure 1")
-ax = plt.axes()
-for name in filename:
-    x = master_data['x'].tolist()
-    y= master_data[name].tolist()
-    ax.plot(x, y)
-plt.legend(filename)
-plt.xlabel("x-position (um)")
-plt.ylabel("Electric Field (eV)")
-plt.show()
-master_data.to_csv(data_path)
