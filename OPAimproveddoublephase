@@ -11,15 +11,15 @@ import pandas as pd
 import os
 import imp
 
-os.add_dll_directory("C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
-lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+os.add_dll_directory("C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
 
 master_data = pd.DataFrame([])
 
 #what phase difference you like to explore?
-phs = [0,45,60,90,120, 135,180, 225, 240, 270, 315, 360]  #list of phase change in degree
-filename = ["0°", "45°", "60°", "90°", "120°", "135°", "180°", "225°", "240°", "270°", "315°", "360°"] #the respective name for the phase change
-n=16 #how many emitters
+phs = [0,30,60,90,120,150,180,210,240,270,300,330,360] #list of phase change in degree
+filename = ["0°", '30°', '60°', '90°','120°','150°','180°','210°','240°','270°','300°','330°','360°'] #the respective name for the phase change
+n=8 #how many emitters
 wavelength = 1.565e-6 #wavelength
 source_x = 2e-6 #width of the source in x-direction
 x_distance = 100e-6 #distance of fdtd boundary from the first/last light source along x-axis
@@ -79,7 +79,8 @@ else:
 
         phase_difference = interleave_diff_len_lists(phase_difference1, phase_difference2)
         print(phase_difference)
-
+        
+       
         x_coor = []
         j = 0
         while len(x_coor) <n:
@@ -131,9 +132,9 @@ else:
         fdtd.run()
 
         E = fdtd.getresult("E_height","E")
-        x = E["x"].tolist()
-        x = pd.Series(x)
-        master_data["x"] = x.values
+        x = E["x"]
+        x = x[:,0].tolist()
+        master_data["x"] = x
         
         E_field = E["E"]
         Ex = E_field[:,0,0,0,0]
@@ -150,6 +151,9 @@ else:
         y1 = E1["y"]
         z = E1["z"]
         z = z[:,0]
+        x1 = [s * 1000000 for s in x1]
+        z = [t * 1000000 for t in z]
+
             
         E2 = E1["E"]
 
@@ -158,22 +162,23 @@ else:
         Ez1 = E2[:,0,:,0,2]
         Emag1 = np.sqrt(np.abs(Ex1)**2 + np.abs(Ey1)**2 + np.abs(Ez1)**2)
         Emag1 = np.transpose(Emag1)
-
+        
+        fig2 = plt.figure("Figure 2")
         plt.contourf(x1,z,Emag1, 100)
         plt.colorbar()
-        plt.xlabel("x-position (m)")
-        plt.ylabel("z-position (m)")
-        plt.title(name)
+        plt.xlabel("x-position (um)")
+        plt.ylabel("z-position (um)")
+        plt.title("8 Emitters "+name)
+        plt.savefig('C:\\Users\\limyu\\Downloads\\OPAsimulation\\8emitter'+name+'.png')
         plt.show()
         plt.close()
 
 
     print(master_data.head())
-    master_data.to_csv('C:\\Users\\Lim Yudian\\Downloads\\OPA_data16emittersdoublephase.csv')
+    master_data.to_csv('C:\\Users\\limyu\\Downloads\\OPAsimulation\\OPA_data8emitters.csv')
     fig1 = plt.figure("Figure 1")
     ax = plt.axes()
     for name in filename:
-        x = master_data['x'].tolist()
         y= master_data[name].tolist()
         ax.plot(x, y)
     plt.legend(filename)
@@ -181,11 +186,5 @@ else:
     plt.ylabel("Electric Field (eV)")
     plt.show()
 
-fig2=plt.figure("Figure 2")
-ax1 = plt.axes()
-ax1.plot(x, master_data("0°"))
 
 
-
-
-    
