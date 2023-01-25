@@ -1,0 +1,113 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Dec 31 14:06:10 2022
+
+@author: Lim Yudian
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+import imp
+from matplotlib.ticker import StrMethodFormatter
+
+os.add_dll_directory("C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+
+fdtd = lumapi.FDTD("C:\\Users\\limyu\\Documents\\2d grating with nitride")
+fdtd.switchtolayout()
+pitch = [0.7,0.8,0.9,1.0,1.1,1.2] #list of phase change in degree
+
+
+fdtd.select("FDTD");
+fdtd.set("x min", -30e-6)
+fdtd.set("x max", 80e-6)
+fdtd.set("y min", -5e-6)
+fdtd.set("y max", 90e-6)
+
+fdtd.select("FDTD::ports"); # select the port group
+fdtd.set("source port","port 2")
+fdtd.set("source mode","mode 1")
+
+fdtd.setglobalsource("wavelength start",1092e-9)
+master_data_horizontal = pd.DataFrame([])
+
+
+for p in pitch:
+    
+    fdtd.select("grating_coupler_2D")
+    fdtd.set("pitch", p*0.000001)
+    fdtd.run()
+    E = fdtd.getresult("full profile","E")
+    E2 = E["E"]
+
+    Ex1 = E2[:,:,0,0,0]
+    Ey1 = E2[:,:,0,0,1]
+    Ez1 = E2[:,:,0,0,2]
+    Emag1 = np.sqrt(np.abs(Ex1)**2 + np.abs(Ey1)**2 + np.abs(Ez1)**2)
+    Emag1 = np.transpose(Emag1)
+    x1 = E["x"]
+    x1 = x1[:,0]
+    x1 = [i*1000000 for i in x1]
+    y1 = E["y"]
+    y1 = y1[:,0]
+    y1 = [j*1000000 for j in y1]
+    z1 = E["z"]
+    colorbarmax = round(max(Emag1.max(axis=1)),1)
+
+    
+
+    fig,ax=plt.subplots(1,1)
+    cp=ax.contourf(x1,y1,Emag1, 200, zdir='z', offset=-100, cmap='hot')
+    clb=fig.colorbar(cp, ticks=(np.arange(0,colorbarmax,0.2)).tolist())
+    clb.ax.set_title('Electric Field (eV)', fontweight="bold")
+    for l in clb.ax.yaxis.get_ticklabels():
+        l.set_weight("bold")
+        l.set_fontsize(12)
+    ax.set_xlabel('x-position (µm)', fontsize=13, fontweight="bold", labelpad=1)
+    ax.set_ylabel('y-position (µm)', fontsize=13, fontweight="bold", labelpad=1)
+    ax.xaxis.label.set_fontsize(13)
+    ax.xaxis.label.set_weight("bold")
+    ax.yaxis.label.set_fontsize(13)
+    ax.yaxis.label.set_weight("bold")
+    ax.tick_params(axis='both', which='major', labelsize=13)
+    ax.set_yticklabels(ax.get_yticks(), weight='bold')
+    ax.set_xticklabels(ax.get_xticks(), weight='bold')
+    ax.xaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'))
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'))
+    df = pd.DataFrame(Emag1, index = y1, columns = x1)
+    df.to_excel("C:\\Users\\limyu\\Documents\\pitch"+str(p)+".xlsx",sheet_name='Sheet_name_1')
+    E_horizontal = df.iloc[658,:]
+    master_data_horizontal[p] = E_horizontal
+    fdtd.switchtolayout()
+
+    plt.show()
+    plt.close()
+
+ax1 = plt.axes()
+for p in pitch:
+    ax1.plot(x1, master_data_horizontal[p].tolist())
+ax1.tick_params(which='major', width=2.00)
+ax1.tick_params(which='minor', width=2.00)
+legend = ax1.legend(pitch, fontsize=13, prop = {'weight':'bold'}, title="Radius", title_fontproperties={'weight':'bold'}, loc="upper left")
+ax1.xaxis.label.set_fontsize(13)
+ax1.xaxis.label.set_weight("bold")
+ax1.yaxis.label.set_fontsize(13)
+ax1.yaxis.label.set_weight("bold")
+ax1.tick_params(axis='both', which='major', labelsize=13)
+ax1.set_yticklabels(ax1.get_yticks(), weight='bold')
+ax1.set_xticklabels(ax1.get_xticks(), weight='bold')
+ax1.yaxis.set_major_formatter(StrMethodFormatter('{x:,.3f}'))
+ax1.spines["right"].set_visible(False)
+ax1.spines["top"].set_visible(False)
+ax1.spines['bottom'].set_linewidth(2)
+ax1.spines['left'].set_linewidth(2)
+plt.xlabel("x-position (um)")
+plt.ylabel("Electric Field (eV)")
+plt.show()  
+master_data_horizontal.to_excel("C:\\Users\\limyu\\Documents\\fieldat80um.xlsx",sheet_name='Sheet_name_1')
+
+    
+
+
