@@ -1,0 +1,100 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jan 25 21:40:46 2023
+
+@author: limyu
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+import imp
+from matplotlib.ticker import StrMethodFormatter
+
+os.add_dll_directory("C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+
+fdtd = lumapi.FDTD(r"C:\Users\limyu\Google Drive\2D grating GDS\grating_coupler_2D_startdesign")
+
+fdtd.switchtolayout()
+
+fdtd.select("FDTD")
+fdtd.set("dimension", "2D")
+fdtd.set("x min", -30e-6)
+fdtd.set("x max", 110e-6)
+fdtd.set("y min", -5e-6)
+fdtd.set("y max", 90e-6)
+fdtd.set("z", 0.0)
+
+fdtd.select("full_profile")
+fdtd.set("monitor type", 7)
+fdtd.set("x min", -30e-6)
+fdtd.set("x max", 110e-6)
+fdtd.set("y min", -5e-6)
+fdtd.set("y max", 90e-6)
+fdtd.set("z", 0.0)
+
+fdtd.select("FDTD::ports"); # select the port group
+fdtd.set("source port","port 2")
+fdtd.set("source mode","mode 1")
+
+fdtd.setglobalsource("wavelength start",1092e-9)
+master_data_horizontal = pd.DataFrame([])
+
+fdtd.select("grating_coupler_2D")
+fdtd.set("enabled",0)
+
+fdtd.select("GDS_LAYER_1:0")
+fdtd.set("enabled",0)
+
+fdtd.gdsimport(r"C:\Users\limyu\Google Drive\2D grating GDS\2D straight grating duty cycle 0.5 pitch fixed at 0.7 um.gds", "0", 1, "Si3N4 (Silicon Nitride) - Phillip", 0, 1e-6)
+fdtd.set("name", "2D straight grating duty cycle 0.5 pitch fixed at 0.7 um")
+fdtd.set("z span", 0.48e-6)
+fdtd.set("z", 0.0)
+fdtd.set("x", -0.125e-6)
+fdtd.set("y", 0.2e-6)
+
+fdtd.run()
+E = fdtd.getresult("full_profile","E")
+E2 = E["E"]
+
+Ex1 = E2[:,:,0,0,0]
+Ey1 = E2[:,:,0,0,1]
+Ez1 = E2[:,:,0,0,2]
+Emag1 = np.sqrt(np.abs(Ex1)**2 + np.abs(Ey1)**2 + np.abs(Ez1)**2)
+Emag1 = np.transpose(Emag1)
+x1 = E["x"]
+x1 = x1[:,0]
+x1 = [i*1000000 for i in x1]
+y1 = E["y"]
+y1 = y1[:,0]
+y1 = [j*1000000 for j in y1]
+z1 = E["z"]
+colorbarmax = round(max(Emag1.max(axis=1)),1)
+
+    
+
+fig,ax=plt.subplots(1,1)
+cp=ax.contourf(x1,y1,Emag1, 200, zdir='z', offset=-100, cmap='hot')
+clb=fig.colorbar(cp, ticks=(np.arange(0,colorbarmax,0.2)).tolist())
+clb.ax.set_title('Electric Field (eV)', fontweight="bold")
+for l in clb.ax.yaxis.get_ticklabels():
+    l.set_weight("bold")
+    l.set_fontsize(12)
+ax.set_xlabel('x-position (µm)', fontsize=13, fontweight="bold", labelpad=1)
+ax.set_ylabel('y-position (µm)', fontsize=13, fontweight="bold", labelpad=1)
+ax.xaxis.label.set_fontsize(13)
+ax.xaxis.label.set_weight("bold")
+ax.yaxis.label.set_fontsize(13)
+ax.yaxis.label.set_weight("bold")
+ax.tick_params(axis='both', which='major', labelsize=13)
+ax.set_yticklabels(ax.get_yticks(), weight='bold')
+ax.set_xticklabels(ax.get_xticks(), weight='bold')
+ax.xaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'))
+ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'))
+
+fdtd.switchtolayout()
+
+plt.show()
+plt.close()
