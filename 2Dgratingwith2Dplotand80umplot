@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Dec 31 14:06:10 2022
+Created on Wed Jan 25 21:40:46 2023
 
-@author: Lim Yudian
+@author: limyu
 """
 
 import numpy as np
@@ -12,19 +12,48 @@ import os
 import imp
 from matplotlib.ticker import StrMethodFormatter
 
-os.add_dll_directory("C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
-lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v202\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+os.add_dll_directory("C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
+lumapi = imp.load_source("lumapi","C:\\Program Files\\Lumerical\\v222\\api\\python\\lumapi.py") #the lumapi.py path in your pc, remember the double \\
 
-fdtd = lumapi.FDTD("C:\\Users\\limyu\\Documents\\2d grating with nitride")
+fdtd = lumapi.FDTD(r"C:\Users\Lim Yudian\Documents\focusinggrating2Dgds\grating_coupler_2D.fsp")
+
+path = "C://Users//Lim Yudian//Documents//focusinggrating2Dgds//2dgrating"
+
+master_data_horizontal = pd.DataFrame([])
+
+GDSs = os.listdir(path)
+
+print("Files and directories in '", path, "' :")
+
+# prints all files
+for gds in GDSs:
+    print(gds)
+
+filenames = []
+
+for gds in GDSs:
+    filenames.append(gds.replace('.GDS', ''))
+
+for filename in filenames:
+    print(filename)
+
 fdtd.switchtolayout()
-pitch = [0.7,0.8,0.9,1.0,1.1,1.2] #list of phase change in degree
 
-
-fdtd.select("FDTD");
-fdtd.set("x min", -30e-6)
-fdtd.set("x max", 80e-6)
+fdtd.select("FDTD")
+fdtd.set("dimension", "2D")
+fdtd.set("x min", -50e-6)
+fdtd.set("x max", 150e-6)
 fdtd.set("y min", -5e-6)
 fdtd.set("y max", 90e-6)
+fdtd.set("z", 0.0)
+
+fdtd.select("full_profile")
+fdtd.set("monitor type", 7)
+fdtd.set("x min", -50e-6)
+fdtd.set("x max", 150e-6)
+fdtd.set("y min", -5e-6)
+fdtd.set("y max", 90e-6)
+fdtd.set("z", 0.0)
 
 fdtd.select("FDTD::ports"); # select the port group
 fdtd.set("source port","port 2")
@@ -33,13 +62,18 @@ fdtd.set("source mode","mode 1")
 fdtd.setglobalsource("wavelength start",1092e-9)
 master_data_horizontal = pd.DataFrame([])
 
+fdtd.select("grating")
+fdtd.set("enabled",0)
+for gds, filename in zip(GDSs, filenames):
+    fdtd.gdsimport("C:\\Users\\Lim Yudian\\Documents\\focusinggrating2Dgds\\2dgrating\\" + gds, "0", 1, "Si3N4 (Silicon Nitride) - Phillip", 0, 1e-6)
+    fdtd.set("name", gds)
+    fdtd.set("z span", 0.48e-6)
+    fdtd.set("z", 0.0)
+    fdtd.set("x", -10e-6)
+    fdtd.set("y", 0.2e-6)
 
-for p in pitch:
-    
-    fdtd.select("grating_coupler_2D")
-    fdtd.set("pitch", p*0.000001)
     fdtd.run()
-    E = fdtd.getresult("full profile","E")
+    E = fdtd.getresult("full_profile","E")
     E2 = E["E"]
 
     Ex1 = E2[:,:,0,0,0]
@@ -56,7 +90,7 @@ for p in pitch:
     z1 = E["z"]
     colorbarmax = round(max(Emag1.max(axis=1)),1)
 
-    
+        
 
     fig,ax=plt.subplots(1,1)
     cp=ax.contourf(x1,y1,Emag1, 200, zdir='z', offset=-100, cmap='hot')
@@ -77,20 +111,32 @@ for p in pitch:
     ax.xaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'))
     ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'))
     df = pd.DataFrame(Emag1, index = y1, columns = x1)
-    df.to_excel("C:\\Users\\limyu\\Documents\\pitch"+str(p)+".xlsx",sheet_name='Sheet_name_1')
-    E_horizontal = df.iloc[658,:]
-    master_data_horizontal[p] = E_horizontal
-    fdtd.switchtolayout()
-
+    df.to_excel('C:\\Users\\Lim Yudian\\Documents\\focusinggrating2Dgds\\2dgrating\\'+filename+'.xlsx',sheet_name='Sheet_name_1')
+    E_horizontal = df.iloc[1184,:]
+    master_data_horizontal[filename] = E_horizontal
+    fig.savefig('C:\\Users\\Lim Yudian\\Documents\\focusinggrating2Dgds\\2dgrating\\'+filename+'.tiff')
     plt.show()
+    
+    
     plt.close()
 
+    fdtd.switchtolayout()
+
+    fdtd.select(gds)
+    fdtd.set("enabled",0)
+    fdtd.select(gds)
+    fdtd.delete()
+    
+
+
+
+
 ax1 = plt.axes()
-for p in pitch:
-    ax1.plot(x1, master_data_horizontal[p].tolist())
+for filename in filenames:
+    ax1.plot(x1, master_data_horizontal[filename].tolist())
 ax1.tick_params(which='major', width=2.00)
 ax1.tick_params(which='minor', width=2.00)
-legend = ax1.legend(pitch, fontsize=13, prop = {'weight':'bold'}, title="Radius", title_fontproperties={'weight':'bold'}, loc="upper left")
+legend = ax1.legend(filename, fontsize=13, prop = {'weight':'bold'}, title="type", title_fontproperties={'weight':'bold'}, loc="upper left")
 ax1.xaxis.label.set_fontsize(13)
 ax1.xaxis.label.set_weight("bold")
 ax1.yaxis.label.set_fontsize(13)
@@ -106,8 +152,7 @@ ax1.spines['left'].set_linewidth(2)
 plt.xlabel("x-position (um)")
 plt.ylabel("Electric Field (eV)")
 plt.show()  
-master_data_horizontal.to_excel("C:\\Users\\limyu\\Documents\\fieldat80um.xlsx",sheet_name='Sheet_name_1')
+master_data_horizontal.to_excel("C:\\Users\\Lim Yudian\\Documents\\focusinggrating2Dgds\\2dgrating\\fieldat80um.xlsx",sheet_name='Sheet_name_1')
 
-    
 
 
